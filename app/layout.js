@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
           >
             <ConvexClientProvider>
               <main className="bg-slate-900 min-h-screen overflow-x-hidden">
-                <div className="fixed top-6 right-6 z-50">
+                <div className="fixed top-6 right-6 z-50 hidden lg:block">
                   <ModeToggle />
                 </div>
                 <Header />
