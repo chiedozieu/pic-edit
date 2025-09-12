@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 export const store = mutation({
   args: {},
@@ -32,11 +32,31 @@ export const store = mutation({
       tokenIdentifier: identity.tokenIdentifier,
       email: identity.email,
       imageUrl: identity.pictureUrl,
-      plan: "free",
-      projectsUsed: 0,
+      plan: "free", // default plan
+      projectsUsed: 0, // initialize counter
       exportsThisMonth: 0,
       createdAt: Date.now(),
       lastActiveAt: Date.now(),
     });
+  },
+});
+
+export const getCurrentUser = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier)
+      )
+      .unique();
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
   },
 });
