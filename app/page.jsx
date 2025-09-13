@@ -10,7 +10,6 @@ export default function Home() {
     <div className="pt-12">
       {/* Hero */}
       <HeroSection />
-      {/* stats */}
       {/* features */}
       <FeaturesSection />
       {/* pricing */}
