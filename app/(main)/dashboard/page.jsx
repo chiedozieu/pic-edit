@@ -6,6 +6,7 @@ import { useConvexQuery } from "@/hooks/use-convex-query";
 import { Plus, Sparkles } from "lucide-react";
 import React, { useState } from "react";
 import { BarLoader } from "react-spinners";
+import NewProjectModal from "./_components/new-project-modal";
 
 const Dashboard = () => {
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -45,19 +46,25 @@ const Dashboard = () => {
             <h3 className="text-2xl font-semibold text-white mb-1">
               No projects yet
             </h3>
-          
-            <p className="text-white/70 mb-8 max-w-md">Upload an image to start editing with AI tools</p>
+
+            <p className="text-white/70 mb-8 max-w-md">
+              Upload an image to start editing with AI tools
+            </p>
             <Button
-            onClick={() => setShowNewProjectModal(true)}
-            variant={"primary"}
-            size={"xl"}
-            className="gap-2"
-          >
-            <Sparkles className="size-5" />
-            Start Creating
-          </Button>
+              onClick={() => setShowNewProjectModal(true)}
+              variant={"primary"}
+              size={"xl"}
+              className="gap-2"
+            >
+              <Sparkles className="size-5" />
+              Start Creating
+            </Button>
           </div>
         )}
+        <NewProjectModal
+          isOpen={showNewProjectModal}
+          onClose={() => setShowNewProjectModal(false)}
+        />
       </div>
     </div>
   );
