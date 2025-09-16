@@ -1,5 +1,6 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,23 +8,83 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { api } from "@/convex/_generated/api";
-import { useConvexQuery } from "@/hooks/use-convex-query";
+import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
 import { usePlanAccess } from "@/hooks/use-plan-access";
-import { Crown } from "lucide-react";
-import React from "react";
+import { Crown, ImageIcon, Loader2, Upload, X } from "lucide-react";
+import React, { useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
 
 const NewProjectModal = ({ isOpen, onClose }) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [projectTitle, setProjectTitle] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);  
+
   const { isFree, canCreateProject } = usePlanAccess();
   const { data: projects } = useConvexQuery(api.projects.getUserProjects);
+  const { mutate: createProject } = useConvexMutation(api.projects.create);
 
   const currentProjectCount = projects?.length || 0;
 
   const canCreate = canCreateProject(currentProjectCount);
 
   const handleClose = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setProjectTitle("");
+    setIsUploading(false);
     onClose();
   };
+
+  const onDrop = (acceptedFiles) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+
+      const nameWithOutExtension = file.name.replace(/\.[^/.]+$/, "");
+      setProjectTitle(nameWithoutExtension || "Untitled Project");
+    }
+  };
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+    },
+    maxFiles: 1,
+    maxSize: 20 * 1024 * 1024, // 20MB
+  });
+
+  const handleCreateProject = async () => {
+   if(!canCreate) {
+    setShowUpgradeModal(true);
+    return;
+   }
+   if(!selectedFile || !projectTitle.trim()) {
+    toast.error("Please select an image and enter a project title.");
+    return;
+   }
+
+   setIsUploading(true);
+   try {
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+    formData.append("filename", selectedFile.name);
+    await createProject(formData);
+    handleClose();
+    toast.success("Project created successfully!");
+   } catch (error) {
+    toast.error(error.message);
+   } finally {
+    setIsUploading(false);
+   }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -54,8 +115,95 @@ const NewProjectModal = ({ isOpen, onClose }) => {
                 </AlertDescription>
               </Alert>
             )}
+            {/* Upload area */}
+            {!selectedFile ? (
+              <div
+                {...getRootProps()}
+                className={`flex flex-col items-center justify-center border border-dashed border-white/20 rounded-md p-4 transition-all ${isDragActive ? "border-cyan-400 bg-cyan-400/5" : "border-white/20 hover:border-white/40"} ${!canCreate ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              >
+                <input {...getInputProps()} />
+                <Upload className="size-12 text-white/50 mx-auto mb-4 cursor-pointer" />
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  {isDragActive ? "Drop your image here" : "Upload an image"}
+                </h3>
+                <p className="text-white/70 mb-4">
+                  {canCreate
+                    ? "Drag and drop or click to upload an image"
+                    : "Upgrade to Pro to create unlimited projects."}
+                </p>{" "}
+                <p className="text-xs text-white/50">
+                  Supports JPEG, PNG, and WebP. Max 20MB.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="relative">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-64 object-cover rounded-xl border border-white/0"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setPreviewUrl(null);
+                      setSelectedFile(null);
+                      setProjectTitle("");
+                    }}
+                    className="absolute top-2 right-2 text-white/70 hover:text-white cursor-pointer"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="project-title" className="text-white">Project Title</Label>
+                    <Input
+                      id="project-title"
+                      value={projectTitle}
+                      placeholder="Enter project name"
+                      onChange={(e) => setProjectTitle(e.target.value)}
+                      className="bg-slate-700 border border-white/20 text-white placeholder:text-white/50 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                </div>
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                        <ImageIcon className="size-5 text-cyan-400" />
+                        <div className="">
+                            <p className="text-white font-medium">{selectedFile?.name}</p>
+                            <p className="text-white/70 text-sm">{(selectedFile?.size / 1024 / 1024).toFixed(2)}MB</p>
+                        </div>
+                    </div>
+                </div>
+              </div>
+            )}
           </div>
-          <DialogFooter></DialogFooter>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={handleClose}
+              className="text-white/70 hover:text-white cursor-pointer"
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="primary"
+              onClick={handleCreateProject}
+              className="text-white/70 hover:text-white cursor-pointer"
+              disabled={!selectedFile || isUploading || !projectTitle.trim()}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Project"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
