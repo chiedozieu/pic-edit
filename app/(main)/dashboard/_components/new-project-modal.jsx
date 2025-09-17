@@ -14,6 +14,7 @@ import { api } from "@/convex/_generated/api";
 import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import { Crown, ImageIcon, Loader2, Upload, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
@@ -23,7 +24,8 @@ const NewProjectModal = ({ isOpen, onClose }) => {
   const [projectTitle, setProjectTitle] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);  
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const router = useRouter();
 
   const { isFree, canCreateProject } = usePlanAccess();
   const { data: projects } = useConvexQuery(api.projects.getUserProjects);
@@ -48,7 +50,8 @@ const NewProjectModal = ({ isOpen, onClose }) => {
       setPreviewUrl(URL.createObjectURL(file));
 
       const nameWithOutExtension = file.name.replace(/\.[^/.]+$/, "");
-      setProjectTitle(nameWithoutExtension || "Untitled Project");
+      
+      setProjectTitle(nameWithOutExtension || "Untitled Project");
     }
   };
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -61,28 +64,53 @@ const NewProjectModal = ({ isOpen, onClose }) => {
   });
 
   const handleCreateProject = async () => {
-   if(!canCreate) {
-    setShowUpgradeModal(true);
-    return;
-   }
-   if(!selectedFile || !projectTitle.trim()) {
-    toast.error("Please select an image and enter a project title.");
-    return;
-   }
+    if (!canCreate) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    if (!selectedFile || !projectTitle.trim()) {
+      toast.error("Please select an image and enter a project title.");
+      return;
+    }
 
-   setIsUploading(true);
-   try {
-    const formData = new FormData();
-    formData.append("image", selectedFile);
-    formData.append("filename", selectedFile.name);
-    await createProject(formData);
-    handleClose();
-    toast.success("Project created successfully!");
-   } catch (error) {
-    toast.error(error.message);
-   } finally {
-    setIsUploading(false);
-   }
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("filename", selectedFile.name);
+
+      const uploadResponse = await fetch("/api/imagekit/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadResponse.json();
+      if (!uploadData.success) {
+        throw new Error(uploadData.error || "Failed to upload image");
+      }
+
+      const projectId = await createProject({
+        title: projectTitle.trim(),
+        originalImageUrl: uploadData.url,
+        currentImageUrl: uploadData.url,
+        thumbnailUrl: uploadData.thumbnailUrl,
+        width: uploadData.width || 800,
+        height: uploadData.height || 600,
+        canvasState: null,
+      });
+
+      toast.success("Project created successfully!");
+
+      router.push(`/editor/${projectId}`);
+
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast.error(
+        error.message || "Failed to create project please try again."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -157,23 +185,29 @@ const NewProjectModal = ({ isOpen, onClose }) => {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="project-title" className="text-white">Project Title</Label>
-                    <Input
-                      id="project-title"
-                      value={projectTitle}
-                      placeholder="Enter project name"
-                      onChange={(e) => setProjectTitle(e.target.value)}
-                      className="bg-slate-700 border border-white/20 text-white placeholder:text-white/50 focus:border-cyan-400 focus:ring-cyan-400"
-                    />
+                  <Label htmlFor="project-title" className="text-white">
+                    Project Title
+                  </Label>
+                  <Input
+                    id="project-title"
+                    value={projectTitle}
+                    placeholder="Enter project name"
+                    onChange={(e) => setProjectTitle(e.target.value)}
+                    className="bg-slate-700 border border-white/20 text-white placeholder:text-white/50 focus:border-cyan-400 focus:ring-cyan-400"
+                  />
                 </div>
                 <div className="bg-slate-700/50 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                        <ImageIcon className="size-5 text-cyan-400" />
-                        <div className="">
-                            <p className="text-white font-medium">{selectedFile?.name}</p>
-                            <p className="text-white/70 text-sm">{(selectedFile?.size / 1024 / 1024).toFixed(2)}MB</p>
-                        </div>
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="size-5 text-cyan-400" />
+                    <div className="">
+                      <p className="text-white font-medium">
+                        {selectedFile?.name}
+                      </p>
+                      <p className="text-white/70 text-sm">
+                        {(selectedFile?.size / 1024 / 1024).toFixed(2)}MB
+                      </p>
                     </div>
+                  </div>
                 </div>
               </div>
             )}
