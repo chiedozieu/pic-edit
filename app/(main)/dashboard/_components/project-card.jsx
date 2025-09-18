@@ -6,6 +6,7 @@ import { useConvexMutation } from "@/hooks/use-convex-query";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Edit, Trash2 } from "lucide-react";
 import React from "react";
+import { toast } from "sonner";
 
 const ProjectCard = ({ project, onEdit }) => {
   const { mutate: deleteProject, isLoading } = useConvexMutation(
@@ -15,7 +16,20 @@ const ProjectCard = ({ project, onEdit }) => {
     addSuffix: true,
     includeSeconds: true,
   });
-  const handleDelete = () => {};
+  const handleDelete = async () => {
+    const confirmed = confirm(
+      `Are you sure you want to delete "${project.title}"? This action cannot be undone.`
+    );
+    if (confirmed) {
+      try {
+        await deleteProject({ projectId: project._id });
+        toast.success("Project deleted successfully");
+      } catch (error) {
+        console.error("Error deleting project:", error);
+        toast.error("Failed to delete project. Please try again.");
+      }
+    }
+  };
   return (
     <Card className="py-0 group relative bg-slate-800/50 overflow-hidden hover:border-white/20">
       <div className="aspect-video bg-slate-700 relative overflow-hidden transition-all hover:scale-105 hover:transform duration-300">
@@ -48,13 +62,13 @@ const ProjectCard = ({ project, onEdit }) => {
           {project.title}
         </h3>
         <div className="flex items-center justify-between text-white/70">
-        <span className="text-xs">Updated {lastUpdated}</span>
-            <Badge
-              variant="secondary"
-              className="text-xs bg-slate-700 text-white/70"
-            >
-              { project.width } x { project.height }
-            </Badge>
+          <span className="text-xs">Updated {lastUpdated}</span>
+          <Badge
+            variant="secondary"
+            className="text-xs bg-slate-700 text-white/70"
+          >
+            {project.width} x {project.height}
+          </Badge>
         </div>
       </CardContent>
     </Card>
