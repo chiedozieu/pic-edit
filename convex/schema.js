@@ -26,15 +26,6 @@ export default defineSchema({
     // basic project info
     title: v.string(),
     userId: v.id("users"),
-    email: v.string(),
-    tokenIdentifier: v.string(),
-    imageUrl: v.optional(v.string()),
-
-    plan: v.union(v.literal("free"), v.literal("pro")),
-
-    // usage tracking for plan limits
-    projectsUsed: v.number(), // number of projects count
-    exportsThisMonth: v.number(), // number of exports this month
 
     // canvas dimensions and state
 
@@ -52,10 +43,7 @@ export default defineSchema({
 
     // AI feature state tracks what AI features have been applied
     backgroundRemoved: v.optional(v.boolean()), // has background been removed
-    // upscaled: v.boolean(), // has image been upscaled
-    // colorEnhanced: v.boolean(), // has color enhancement been applied
-    // filtersApplied: v.array(v.string()), // list of filters applied
-    // editsHistory: v.array(v.string()), // list of edit descriptions applied
+    
 
     // organization
     folderId: v.optional(v.id("folders")), // optional folder association

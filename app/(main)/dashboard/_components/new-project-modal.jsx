@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import UpgradeModal from "@/components/upgrade-modal";
 import { api } from "@/convex/_generated/api";
 import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
 import { usePlanAccess } from "@/hooks/use-plan-access";
@@ -50,7 +51,7 @@ const NewProjectModal = ({ isOpen, onClose }) => {
       setPreviewUrl(URL.createObjectURL(file));
 
       const nameWithOutExtension = file.name.replace(/\.[^/.]+$/, "");
-      
+
       setProjectTitle(nameWithOutExtension || "Untitled Project");
     }
   };
@@ -102,7 +103,6 @@ const NewProjectModal = ({ isOpen, onClose }) => {
       toast.success("Project created successfully!");
 
       router.push(`/editor/${projectId}`);
-
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error(
@@ -240,6 +240,12 @@ const NewProjectModal = ({ isOpen, onClose }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        restrictedTool="projects"
+        reason="Free plan is limited to 3 projects. Upgrade to Pro to create unlimited projects."
+      />
     </>
   );
 };

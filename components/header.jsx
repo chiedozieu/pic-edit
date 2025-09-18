@@ -75,7 +75,7 @@ const Header = () => {
         </div>
         {isLoading && (
           <div className="fixed bottom-0 left-0 w-full flex justify-center z-40">
-            <BarLoader color="#9f3ff2" width={"95%"} />
+            <BarLoader color="#9f3ff2" width={"85%"} />
           </div>
         )}
       </div>
