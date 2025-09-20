@@ -87,7 +87,7 @@ export const getProject = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
     const user = await ctx.runQuery(internal.users.getCurrentUser);
-    const project = await ctx.db.get(args.projectId);
+    const project = await ctx.db.get(args?.projectId);
     if (!project) {
       throw new Error("Project not found");
     }
