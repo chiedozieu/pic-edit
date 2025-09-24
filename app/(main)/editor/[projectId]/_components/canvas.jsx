@@ -7,7 +7,6 @@ import { Canvas, FabricImage } from "fabric";
 import { Loader, Loader2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
-
 const CanvasEditor = ({ project }) => {
   const [isLoading, setIsLoading] = useState(true);
   const canvasRef = useRef();
@@ -21,144 +20,138 @@ const CanvasEditor = ({ project }) => {
   );
 
   const calculateViewportScale = () => {
-    if(!containerRef.current || !project ) return 1
+    if (!containerRef.current || !project) return 1;
 
-     const container = containerRef.current;
+    const container = containerRef.current;
     const containerWidth = container.clientWidth - 40; // 40px for padding
-    const containerHeight = container.clientHeight - 40; 
+    const containerHeight = container.clientHeight - 40;
 
     const scaleX = containerWidth / project.width;
     const scaleY = containerHeight / project.height;
 
     // Use the smaller scale factor to ensure the canvas fits within the container
     // cap at 1 to prevent overflow
-    return  Math.min(scaleX, scaleY, 1);
-  }
+    return Math.min(scaleX, scaleY, 1);
+  };
   useEffect(() => {
     if (!canvasRef.current || !project || canvasEditor) return;
 
-   
     const initializeCanvas = async () => {
-        setIsLoading(true);
+      setIsLoading(true);
 
-        const viewportScale = calculateViewportScale();
+      const viewportScale = calculateViewportScale();
 
-        const canvas = new Canvas(canvasRef.current, {
-          width: project.width,
-          height: project.height,
+      const canvas = new Canvas(canvasRef.current, {
+        width: project.width,
+        height: project.height,
 
-          backgroundColor: "#ffffff", 
+        backgroundColor: "#ffffff",
 
-          preserveObjectStacking: true, // maintains layer order
-          controlsAboveOverlay: true, // places controls above image
-          selection: true, //  object selection
+        preserveObjectStacking: true, // maintains layer order
+        controlsAboveOverlay: true, // places controls above image
+        selection: true, //  object selection
 
-          hoverCursor: "move", // cursor when hovering over an object
-          moveCursor: "move", // cursor when moving an object
-          defaultCursor: "default", // default cursor
+        hoverCursor: "move", // cursor when hovering over an object
+        moveCursor: "move", // cursor when moving an object
+        defaultCursor: "default", // default cursor
 
-          allowTouchScrolling: false, // disable touch scrolling
+        allowTouchScrolling: false, // disable touch scrolling
 
-          renderOnAddRemove: true, // render canvas when an object is added or removed
-          skipTargetFind: false, // allows object targeting for interaction
-        });
+        renderOnAddRemove: true, // render canvas when an object is added or removed
+        skipTargetFind: false, // allows object targeting for interaction
+      });
 
-        canvas.setDimensions({
-            width: project.width * viewportScale,
-            height: project.height * viewportScale,
+      canvas.setDimensions(
+        {
+          width: project.width * viewportScale,
+          height: project.height * viewportScale,
         },
         {
-            backstoreOnly: true
+          backstoreOnly: true,
         }
-    
-    )
-    canvas.setZoom(viewportScale);  // apply zoom to scale the entire canvas content
+      );
+      canvas.setZoom(viewportScale); // apply zoom to scale the entire canvas content
 
-    const scaleFactor = window.devicePixelRatio || 1
-     if (scaleFactor > 1) {
+      const scaleFactor = window.devicePixelRatio || 1;
+      if (scaleFactor > 1) {
         // increase canvas resolution
         canvas.getElement().width = project.width * scaleFactor;
-        canvas.getElement().height = project.height  * scaleFactor;
+        canvas.getElement().height = project.height * scaleFactor;
 
         // scale the drawing context to match the increased resolution
         canvas.getContext().scale(scaleFactor, scaleFactor);
-    }
-    if(project.currentImageUrl || project.originalImageUrl) {
+      }
+      if (project.currentImageUrl || project.originalImageUrl) {
         try {
-            // use current image if available (may have transformations applied), otherwise use original image
-            const imageUrl = project.currentImageUrl || project.originalImageUrl;
+          // use current image if available (may have transformations applied), otherwise use original image
+          const imageUrl = project.currentImageUrl || project.originalImageUrl;
 
-            const fabricImage = await FabricImage.fromURL(imageUrl, {
-                crossOrigin: "anonymous",  // allow cross-origin requests for loading external images
-                
-            })
+          const fabricImage = await FabricImage.fromURL(imageUrl, {
+            crossOrigin: "anonymous", // allow cross-origin requests for loading external images
+          });
 
-            // calculate scaling to fit image within canvas within canvas while maintaining aspect ratio
-            const imageAspectRatio = fabricImage.width / fabricImage.height;
-            const canvasAspectRatio = project.width / project.height;
+          // calculate scaling to fit image within canvas within canvas while maintaining aspect ratio
+          const imageAspectRatio = fabricImage.width / fabricImage.height;
+          const canvasAspectRatio = project.width / project.height;
 
-            let scaleX;
-            let scaleY;
+          let scaleX;
+          let scaleY;
 
-            if (imageAspectRatio > canvasAspectRatio) {
-                // image is wider than canvas- scale by width
-                scaleX = project.width / fabricImage.width;
-                scaleY = scaleX // maintain aspect ratio
-            } else {
-                // image is taller than canvas- scale by height
-                scaleY = project.height / fabricImage.height;
-                scaleX = scaleY 
-            }
+          if (imageAspectRatio > canvasAspectRatio) {
+            // image is wider than canvas- scale by width
+            scaleX = project.width / fabricImage.width;
+            scaleY = scaleX; // maintain aspect ratio
+          } else {
+            // image is taller than canvas- scale by height
+            scaleY = project.height / fabricImage.height;
+            scaleX = scaleY;
+          }
 
-            fabricImage.set({
-                left: project.width / 2, // center the image, horizontally
-                top: project.height / 2, // center the image, vertically
-                originX: "center", // transform origin at center
-                originY: "center", // transform origin at center
-                scaleX, // horizontal scaling
-                scaleY, // vertical scaling
-                selectable: true, // enable select/move image
-                evented: true, // enable mouse/touch events
-            });
-            // add image to canvas and ensure it's centered
-            canvas.add(fabricImage);
-            canvas.centerObject(fabricImage);
-
+          fabricImage.set({
+            left: project.width / 2, // center the image, horizontally
+            top: project.height / 2, // center the image, vertically
+            originX: "center", // transform origin at center
+            originY: "center", // transform origin at center
+            scaleX, // horizontal scaling
+            scaleY, // vertical scaling
+            selectable: true, // enable select/move image
+            evented: true, // enable mouse/touch events
+          });
+          // add image to canvas and ensure it's centered
+          canvas.add(fabricImage);
+          canvas.centerObject(fabricImage);
         } catch (error) {
-            console.log("Error loading image:", error);
+          console.log("Error loading image:", error);
         }
-    }
-    if(project.canvasState) {
+      }
+      if (project.canvasState) {
         try {
-            // load json state- this will restore all objects and their properties
-            await canvas.loadFromJSON(project.canvasState);
-            canvas.requestRenderAll() // force canvas to re-render after loading state
-
+          // load json state- this will restore all objects and their properties
+          await canvas.loadFromJSON(project.canvasState);
+          canvas.requestRenderAll(); // force canvas to re-render after loading state
         } catch (error) {
-            console.error("Error loading canvas state:", error);
+          console.error("Error loading canvas state:", error);
         }
-    }
-    canvas.calcOffset()
-    canvas.requestRenderAll()
-    setCanvasEditor(canvas);
+      }
+      canvas.calcOffset();
+      canvas.requestRenderAll();
+      setCanvasEditor(canvas);
 
-    setTimeout(() => {
+      setTimeout(() => {
         window.dispatchEvent(new Event("resize"));
-    }, 500);
+      }, 500);
 
-
-    setIsLoading(false);
-    }
+      setIsLoading(false);
+    };
 
     initializeCanvas();
 
     return () => {
-        if (canvasEditor) {
-            canvasEditor.dispose();
-            setCanvasEditor(null);
-        }
-    }
-
+      if (canvasEditor) {
+        canvasEditor.dispose();
+        setCanvasEditor(null);
+      }
+    };
   }, [project]);
 
   const saveCanvasState = async () => {
@@ -176,57 +169,71 @@ const CanvasEditor = ({ project }) => {
 
   useEffect(() => {
     if (!canvasEditor) return;
-   let saveTimeout;
-   // debounce save function to save canvas state every 5 seconds
-   const handleCanvasChange = () => {
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-        saveCanvasState()
-    }, 5000)
-   }
-   // listen for canvas changes events
-   canvasEditor.on("object:modified", handleCanvasChange);
-   canvasEditor.on("object:added", handleCanvasChange);
-   canvasEditor.on("object:removed", handleCanvasChange);
+    let saveTimeout;
+    // debounce save function to save canvas state every 5 seconds
+    const handleCanvasChange = () => {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        saveCanvasState();
+      }, 5000);
+    };
+    // listen for canvas changes events
+    canvasEditor.on("object:modified", handleCanvasChange);
+    canvasEditor.on("object:added", handleCanvasChange);
+    canvasEditor.on("object:removed", handleCanvasChange);
 
-   return () => {
-    clearTimeout(saveTimeout);
-    canvasEditor.off("object:modified", handleCanvasChange);
-    canvasEditor.off("object:added", handleCanvasChange);
-    canvasEditor.off("object:removed", handleCanvasChange);
-   }
-  }, [canvasEditor])
-  
+    return () => {
+      clearTimeout(saveTimeout);
+      canvasEditor.off("object:modified", handleCanvasChange);
+      canvasEditor.off("object:added", handleCanvasChange);
+      canvasEditor.off("object:removed", handleCanvasChange);
+    };
+  }, [canvasEditor]);
 
   useEffect(() => {
-const handleResize = () => {
-    if (!canvasEditor || !project) return
-    // recalculate optimal scale for new window size
-    const newScale = calculateViewportScale();
+    const handleResize = () => {
+      if (!canvasEditor || !project) return;
+      // recalculate optimal scale for new window size
+      const newScale = calculateViewportScale();
 
-    //update canvas display dimensions
-    canvasEditor.setDimensions({
-        width: project.width * newScale,
-        height: project.height * newScale,
-    },
-    {
-        backstoreOnly: true
+      //update canvas display dimensions
+      canvasEditor.setDimensions(
+        {
+          width: project.width * newScale,
+          height: project.height * newScale,
+        },
+        {
+          backstoreOnly: true,
+        }
+      );
+
+      // update canvas zoom
+      canvasEditor.setZoom(newScale);
+
+      canvasEditor.calcOffset();
+      canvasEditor.requestRenderAll();
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [canvasEditor, project]);
+
+  useEffect(() => {
+    if (!canvasEditor) return;
+
+    switch (activeTool) {
+      case "crop":
+        canvasEditor.defaultCursor = "crosshair";
+        canvasEditor.hoverCursor = "crosshair";
+
+        break;
+
+      default:
+        canvasEditor.defaultCursor = "default";
+        canvasEditor.hoverCursor = "default";
+        break;
     }
-    )
-
-    // update canvas zoom
-    canvasEditor.setZoom(newScale);
-
-    canvasEditor.calcOffset()
-    canvasEditor.requestRenderAll()
-
-}
-window.addEventListener("resize", handleResize);
-
-return () => window.removeEventListener("resize", handleResize);
-  }, [canvasEditor, project])
-  
-
+  }, [canvasEditor, activeTool]);
 
   return (
     <div

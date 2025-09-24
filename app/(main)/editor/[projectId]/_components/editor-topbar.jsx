@@ -9,6 +9,8 @@ import {
   Lock,
   Maximize2,
   Palette,
+  RotateCcw,
+  RotateCw,
   Sliders,
   Text,
 } from "lucide-react";
@@ -16,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useCanvas } from "@/context/context";
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import { Button } from "@/components/ui/button";
+import UpgradeModal from "@/components/upgrade-modal";
 
 const TOOLS = [
   {
@@ -99,6 +102,11 @@ const EditorTopBar = ({ project }) => {
   };
 
   const handleToolChange = (toolId) => {
+    if (!hasAccess(toolId)) {
+      setRestrictedTool(toolId);
+      setShowUpgradeModal(true);
+      return;
+    }
     onToolChange(toolId);
   };
 
@@ -136,14 +144,31 @@ const EditorTopBar = ({ project }) => {
                   <Icon className="size-4" />
                   {tool.label}
                   {tool.proOnly && !hasToolAccess && (
-                    <Lock className="size-3 text-red-300" />
+                    <Lock className="size-3 text-amber-400" />
                   )}
                 </Button>
               );
             })}
           </div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="text-white">
+              <RotateCcw className="size-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="text-white">
+              <RotateCw className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          setRestrictedTool(null);
+        }}
+        restrictedTool={restrictedTool}
+      />
     </>
   );
 };
