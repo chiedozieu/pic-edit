@@ -43,10 +43,10 @@ export const store = mutation({
 
 export const getCurrentUser = query({
   handler: async (ctx) => {
-    const identity = await ctx?.auth?.getUserIdentity();
+    const identity = await ctx.auth?.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated in getCurrentUser"); //
-    }
+    } 
 
     const user = await ctx.db
       .query("users")

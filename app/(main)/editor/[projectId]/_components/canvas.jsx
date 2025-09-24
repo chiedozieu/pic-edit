@@ -4,8 +4,9 @@ import { useCanvas } from "@/context/context";
 import { api } from "@/convex/_generated/api";
 import { useConvexMutation } from "@/hooks/use-convex-query";
 import { Canvas, FabricImage } from "fabric";
+import { Loader, Loader2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import { ScaleLoader } from "react-spinners";
+
 
 const CanvasEditor = ({ project }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -160,6 +161,72 @@ const CanvasEditor = ({ project }) => {
 
   }, [project]);
 
+  const saveCanvasState = async () => {
+    if (!canvasEditor || !project) return;
+    try {
+      const canvasJSON = canvasEditor.toJSON();
+      await updateProject({
+        projectId: project._id,
+        canvasState: canvasJSON,
+      });
+    } catch (error) {
+      console.error("Error saving canvas state:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!canvasEditor) return;
+   let saveTimeout;
+   // debounce save function to save canvas state every 5 seconds
+   const handleCanvasChange = () => {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        saveCanvasState()
+    }, 5000)
+   }
+   // listen for canvas changes events
+   canvasEditor.on("object:modified", handleCanvasChange);
+   canvasEditor.on("object:added", handleCanvasChange);
+   canvasEditor.on("object:removed", handleCanvasChange);
+
+   return () => {
+    clearTimeout(saveTimeout);
+    canvasEditor.off("object:modified", handleCanvasChange);
+    canvasEditor.off("object:added", handleCanvasChange);
+    canvasEditor.off("object:removed", handleCanvasChange);
+   }
+  }, [canvasEditor])
+  
+
+  useEffect(() => {
+const handleResize = () => {
+    if (!canvasEditor || !project) return
+    // recalculate optimal scale for new window size
+    const newScale = calculateViewportScale();
+
+    //update canvas display dimensions
+    canvasEditor.setDimensions({
+        width: project.width * newScale,
+        height: project.height * newScale,
+    },
+    {
+        backstoreOnly: true
+    }
+    )
+
+    // update canvas zoom
+    canvasEditor.setZoom(newScale);
+
+    canvasEditor.calcOffset()
+    canvasEditor.requestRenderAll()
+
+}
+window.addEventListener("resize", handleResize);
+
+return () => window.removeEventListener("resize", handleResize);
+  }, [canvasEditor, project])
+  
+
 
   return (
     <div
@@ -180,7 +247,7 @@ const CanvasEditor = ({ project }) => {
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-600/80 z-10">
           <div className="flex flex-col items-center gap-4">
-            <ScaleLoader barCount={20} color="#9e95a0" radius={4} width={1} />
+            <Loader2 className="size-8 animate-spin text-cyan-400" />
             <p className="text-white/70 text-sm"> Loading...</p>
           </div>
         </div>

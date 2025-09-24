@@ -8,11 +8,13 @@ import { useParams } from "next/navigation";
 import React, { useState } from "react";
 import { RingLoader } from "react-spinners";
 import CanvasEditor from "./_components/canvas";
+import EditorTopBar from "./_components/editor-topbar";
+import EditorSidebar from "./_components/editor-sidebar";
 
 const Editor = () => {
-  const [canvasEditor, setCanvasEditor] = useState(null);
-  const [processingMessage, setProcessingMessage] = useState(null);
-  const [activeTool, setActiveTool] = useState("resize");
+  const [ canvasEditor, setCanvasEditor ] = useState(null);
+  const [ processingMessage, setProcessingMessage ] = useState(null);
+  const [ activeTool, setActiveTool ] = useState("resize");
   const params = useParams();
   const projectId = params.projectId;
 
@@ -58,8 +60,8 @@ const Editor = () => {
         setCanvasEditor,
         processingMessage,
         setProcessingMessage,
-        onToolChange: activeTool,
-        setActiveTool,
+        onToolChange: setActiveTool,
+        activeTool,
       }}
     >
       <div className="lg:hidden min-h-screen flex items-center justify-center">
@@ -90,8 +92,10 @@ const Editor = () => {
             </div>
           )}
           {/* top bar */}
+          <EditorTopBar project={project} />
           <div className="flex flex-1 overflow-hidden">
             {/* sidebar */}
+            <EditorSidebar project={project} />
             <div className="flex-1 bg-slate-800">
               {/* canvas */}
               <CanvasEditor project={project} />
