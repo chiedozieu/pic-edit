@@ -14,7 +14,6 @@ const Dashboard = () => {
   const {
     data: projects,
     isLoading,
-    error,
   } = useConvexQuery(api.projects.getUserProjects);
 
   console.log("data:", projects);

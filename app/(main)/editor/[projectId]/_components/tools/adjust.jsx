@@ -6,7 +6,7 @@ import { useCanvas } from "@/context/context";
 import { filters } from "fabric";
 import { Loader2, RotateCcw } from "lucide-react";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 // Filter configurations
 const FILTER_CONFIGS = [
@@ -89,7 +89,6 @@ const AdjustControls = () => {
   const [isApplying, setIsApplying] = useState(false);
 
   const { canvasEditor } = useCanvas();
-  const resetFilters = () => {};
 
   const getActiveImage = () => {
     if (!canvasEditor) return null;
@@ -142,8 +141,42 @@ const AdjustControls = () => {
     setFilterValues(newValues);
     applyFilters(newValues);
   };
+  const resetFilters = () => {
+    setFilterValues(DEFAULT_VALUES);
+    applyFilters(DEFAULT_VALUES);
+  };
 
-  if (!true) {
+  const extractFilterValues = (imageObject) => {
+    if (!imageObject?.filters.length) return DEFAULT_VALUES;
+
+    const extractedValues = { ...DEFAULT_VALUES };
+    imageObject.filters.forEach((filter) => {
+      const config = FILTER_CONFIGS.find(
+        (c) => c.filterClass.name === filter.constructor.name
+      );
+      if (config) {
+        const filterValue = filter[config.valueKey];
+        if (config.key === "hue") {
+          extractedValues[config.key] = Math.round(
+            (filterValue * 180) / Math.PI
+          );
+          return;
+        } else extractedValues[config.key] = Math.round(filterValue * 100);
+      }
+    });
+
+    return extractedValues;
+  };
+
+  useEffect(() => {
+    const imageObject = getActiveImage();
+    if (imageObject?.filters) {
+      const exitingValues = extractFilterValues(imageObject);
+      setFilterValues(exitingValues);
+    }
+  }, []);
+
+  if (!canvasEditor) {
     return (
       <div className="p-4">
         <p className="text-white/70 text-sm">
@@ -158,15 +191,17 @@ const AdjustControls = () => {
       {/* reset  */}
       <div className="flex justify-between items-center">
         <h3 className="text-white text-sm font-medium">Image Adjustments</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={resetFilters}
-          className="text-white/70 hover:text-white"
-        >
-          <RotateCcw className="size-4 mr-2" />
-          Reset
-        </Button>
+        <div className="cursor-pointer">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetFilters}
+            className="text-white/70 hover:text-white cursor-pointer"
+          >
+            <RotateCcw className="size-4 mr-2" />
+            {/* Reset */}
+          </Button>
+        </div>
       </div>
       {/* filters */}
       {FILTER_CONFIGS.map((config) => (

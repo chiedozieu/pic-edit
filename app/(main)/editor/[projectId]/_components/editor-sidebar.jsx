@@ -64,7 +64,7 @@ const EditorSidebar = ({project}) => {
             </div>
             <p className="text-sm text-white mt-1">{toolConfig.description}</p>
         </div>
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-4 overflow-y-scroll">
             {renderToolConfig(activeTool, project)}
         </div>
     </div>
@@ -76,7 +76,7 @@ function renderToolConfig(activeTool, project) {
       case "crop":
         return <CropContent />;
       case "resize":
-        return <ResizeControls />;
+        return <ResizeControls project={project} />;
       case "adjust":
         return <AdjustControls />;
     //   case "background":
