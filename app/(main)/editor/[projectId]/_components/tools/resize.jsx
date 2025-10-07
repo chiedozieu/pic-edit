@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { useCanvas } from "@/context/context";
 import { api } from "@/convex/_generated/api";
 import { useConvexMutation } from "@/hooks/use-convex-query";
-import { Lock, Monitor, Unlock } from "lucide-react";
-import { useState } from "react";
+import { Expand, Lock, Monitor, Unlock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const ASPECT_RATIOS = [
   { name: "Instagram Story", ratio: [9, 16], label: "9:16" },
@@ -29,6 +30,16 @@ const ResizeControls = ({ project }) => {
     data,
     isLoading,
   } = useConvexMutation(api.projects.updateProject);
+
+  useEffect(() => {
+   if(!isLoading && data){
+    setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 500);
+    //   window.location.reload()
+   }
+  }, [data, isLoading]);
+  
 
   const handleWidthChange = (value) => {
     const width = parseInt(value) || 0;
@@ -67,6 +78,59 @@ const ResizeControls = ({ project }) => {
     setNewWidth(dimensions.width);
     setNewHeight(dimensions.height);
     setSelectedPreset(aspectRatio.name);
+  };
+
+  const calculateViewportScale = () => {
+    const container = canvasEditor.getElement().parentNode;
+    if (!container) return 1;
+
+    const containerWidth = container.clientWidth - 40; // 40px for padding
+    const containerHeight = container.clientHeight - 40;
+
+    const scaleX = containerWidth / newWidth;
+    const scaleY = containerHeight / newHeight;
+
+    // Use the smaller scale factor to ensure the canvas fits within the container
+    // cap at 1 to prevent overflow
+    return Math.min(scaleX, scaleY, 1);
+  };
+  const handleApplyResize = async () => {
+    if (
+      !canvasEditor ||
+      !project ||
+      (newWidth === project.width && newHeight === project.height)
+    ) {
+      return;
+    }
+    setProcessingMessage("Resizing canvas...");
+    try {
+      // Resize the canvas
+      canvasEditor.setWidth(newWidth);
+      canvasEditor.setHeight(newHeight);
+      const viewportScale = calculateViewportScale();
+      canvasEditor.setDimensions(
+        {
+          width: newWidth * viewportScale,
+          height: newHeight * viewportScale,
+        },
+        { backstoreOnly: false }
+      );
+      canvasEditor.setZoom(viewportScale); // apply zoom to scale the entire canvas content
+      canvasEditor.calcOffset();
+      canvasEditor.requestRenderAll();
+
+      await updateProject({
+        projectId: project._id,
+        width: newWidth,
+        height: newHeight,
+        canvasState: canvasEditor.toJSON(),
+      });
+    } catch (error) {
+      console.error("Error resizing canvas:", error);
+      toast.error("Error resizing canvas. Please try again.");
+    } finally {
+      setProcessingMessage(null);
+    }
   };
 
   if (!canvasEditor || !project) {
@@ -166,8 +230,7 @@ const ResizeControls = ({ project }) => {
           })}
         </div>
       </div>
-      {
-        hasChanges && (
+      {hasChanges && (
         <div className="bg-slate-700/30 rounded-lg p-3">
           <h4 className="text-sm font-medium text-white mb-2">
             New Size Preview
@@ -186,8 +249,26 @@ const ResizeControls = ({ project }) => {
             </div>
           </div>
         </div>
-      )
-      }
+      )}
+      <Button
+        onClick={handleApplyResize}
+        disabled={!hasChanges || processingMessage}
+        className="w-full cursor-pointer"
+        variant="primary"
+      >
+        <Expand className="size-4 mr-2" />
+        Apply Resize
+      </Button>
+      <div className="bg-slate-700/30 rounded-b-lg p-3">
+        <p className="text-xs text-white/70">
+          <strong>Resize Canvas:</strong> Changes canvas dimensions.
+          <br />
+          <strong>Aspect Ratios:</strong> Smart sizing based on your current
+          canvas.
+          <br />
+          objects maintain their size and position.
+        </p>
+      </div>
     </div>
   );
 };
