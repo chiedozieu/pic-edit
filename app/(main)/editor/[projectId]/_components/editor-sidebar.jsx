@@ -6,6 +6,7 @@ import React from 'react'
 import CropContent from './tools/crop';
 import ResizeControls from './tools/resize';
 import AdjustControls from './tools/adjust';
+import BackgroundControls from './tools/ai-background';
 
 const TOOL_CONFIGS = {
   resize: {
@@ -79,8 +80,8 @@ function renderToolConfig(activeTool, project) {
         return <ResizeControls project={project} />;
       case "adjust":
         return <AdjustControls />;
-    //   case "background":
-    //     return <BackgroundToolConfig />;
+      case "background":
+        return <BackgroundControls project={project} />;
     //   case "ai_extender":
     //     return <AIExtenderToolConfig />;
     //   case "text":
