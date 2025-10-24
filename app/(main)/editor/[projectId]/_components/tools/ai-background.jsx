@@ -3,7 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCanvas } from "@/context/context";
 import { FabricImage } from "fabric";
-import { Download, Image, Loader2, Palette, Search, Trash2 } from "lucide-react";
+import {
+  Download,
+  Image,
+  ImageIcon,
+  Loader2,
+  Palette,
+  Search,
+  Trash2,
+} from "lucide-react";
 import React, { useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import { toast } from "sonner";
@@ -16,9 +24,9 @@ const BackgroundControls = ({ project }) => {
 
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   const [searchQuery, setSearchQuery] = useState("");
-  const [unsplashImages, setUnsplashImages] = useState(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedImageId, setSelectedImageId] = useState(null);
+  const [unsplashImages, setUnsplashImages] = useState([]); // search results from unsplash
+  const [isSearching, setIsSearching] = useState(false); // loading state for search
+  const [selectedImageId, setSelectedImageId] = useState(null); // track which image is being processed
 
   const getMainImage = () => {
     if (!canvasEditor) return null;
@@ -70,13 +78,13 @@ const BackgroundControls = ({ project }) => {
   };
 
   const handleColorBackground = () => {
-    if(!canvasEditor) return;
+    if (!canvasEditor) return;
     canvasEditor.backgroundColor = backgroundColor;
     canvasEditor.requestRenderAll();
   };
 
   const searchUnsplashImages = async () => {
-    if (!searchQuery.trim()  || !UNSPLASH_ACCESS_KEY) return;
+    if (!searchQuery.trim() || !UNSPLASH_ACCESS_KEY) return;
     setIsSearching(true);
     try {
       const response = await fetch(
@@ -98,17 +106,54 @@ const BackgroundControls = ({ project }) => {
     }
   };
 
- 
-
   const handleSearchKeyPress = (e) => {
     if (e.key === "Enter") {
       searchUnsplashImages();
     }
   };
 
-  const handleImageBackground = async () => {
+  const handleImageBackground = async (imageUrl, imageId) => {
+    if (!canvasEditor) return;
+    setSelectedImageId(imageId); // show loading for this particular image
 
-  }
+    try {
+      if (UNSPLASH_ACCESS_KEY) {
+        fetch(`${UNSPLASH_API_URL}/photos/${imageId}/download`, {
+          headers: {
+            Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}`,
+          },
+        });
+      }
+      const fabricImage = await FabricImage.fromURL(imageUrl, {
+        crossOrigin: "anonymous",
+      })
+      const canvasWidth = project.width;
+      const canvasHeight = project.height;
+
+      const scaleX = canvasWidth / fabricImage.width;
+      const scaleY = canvasHeight / fabricImage.height;
+      
+      const scale = Math.max(scaleX, scaleY);
+      fabricImage.set({
+        scaleX: scale,
+        scaleY: scale,
+        originX: "center",
+        originY: "center",
+        left: canvasWidth / 2,
+        top: canvasHeight / 2
+      })
+
+
+  
+      canvasEditor.backgroundImage = fabricImage;
+      canvasEditor.requestRenderAll();
+    } catch (error) {
+      console.error("Error adding image background:", error);
+      toast.error("Error adding image background, please try again.");
+    } finally {
+      setSelectedImageId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 relative h-full">
@@ -195,19 +240,22 @@ const BackgroundControls = ({ project }) => {
         </TabsContent>
         <TabsContent value="image" className="space-y-4 mt-6">
           <div className="">
-            <h3 className="text-sm font-medium text-white mb-2"> Image Background</h3> 
+            <h3 className="text-sm font-medium text-white mb-2">
+              {" "}
+              Image Background
+            </h3>
             <p className="text-xs text-white/70 mb-4">
-              Search and use high quality images from Unsplash as your background.
+              Search and use high quality images from Unsplash as your
+              background.
             </p>
           </div>
           <div className="flex gap-2">
             <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for an image"
-            className="flex-1 bg-slate-700 border-white/20 text-white"
-            onKeyPress={handleSearchKeyPress}
-
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for an image"
+              className="flex-1 bg-slate-700 border-white/20 text-white"
+              onKeyPress={handleSearchKeyPress}
             />
             <Button
               onClick={searchUnsplashImages}
@@ -215,56 +263,72 @@ const BackgroundControls = ({ project }) => {
               disabled={isSearching || !searchQuery.trim()}
               // className="w-full"
             >
-             {
-              isSearching ? (
+              {isSearching ? (
                 <Loader2 className="animate-spin size-4" />
               ) : (
                 <Search className="size-4" />
-              )
-             }
-             
+              )}
             </Button>
           </div>
-          {
-            unsplashImages?.length > 0 && (
-              <div className="space-y-3">
+          {unsplashImages?.length > 0 && (
+            <div className="space-y-3">
               <h4 className="text-sm font-medium text-white">
                 Search Results ({unsplashImages.length})
               </h4>
-                <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                  {unsplashImages.map((image) => {
-                    return (
-                      <div
+              <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                {unsplashImages.map((image) => {
+                  return (
+                    <div
                       key={image.id}
                       className="relative cursor-pointer group rounded-lg overflow-hidden border border-white/10 hover:border-cyan-400 transition-colors"
-                      onClick={() => handleImageBackground(image.urls.regular, image.id)}
+                      onClick={() =>
+                        handleImageBackground(image.urls.regular, image.id)
+                      }
                     >
                       <img
                         src={image.urls.small}
                         alt={image.alt_description || "Background Image"}
                         className="w-full h-24 object-cover"
                       />
-                      {
-                        selectedImageId === image.id && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <Loader2 className="size-5 animate-spin text-white" />
-                          </div>
-                        )
-                      }
-                      {
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <Download className="size-5 text-white" />
+                      {selectedImageId === image.id && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Loader2 className="size-5 animate-spin text-white" />
                         </div>
-                      }
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <Download className="size-5 text-white" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/70 ">
+                        <p className="text-xs text-white/80 truncate">
+                          by {image.user.name}
+                        </p>
+                      </div>
                     </div>
-                    )
-                  }
-                    
-                )}
-                </div>
+                  );
+                })}
               </div>
-            )
-          }
+            </div>
+          )}
+          {!isSearching && unsplashImages?.length === 0 && searchQuery && (
+            <div className="text-center py-8">
+              <ImageIcon className="size-12 text-white/30 mx-auto mb-3" />
+              <p className="text-sm text-white/70">
+                No results found for "{searchQuery}"
+              </p>
+              <p className="text-white/50 text-xs">
+                Try searching for something else
+              </p>
+            </div>
+          )}
+          {!isSearching && unsplashImages?.length === 0 && (
+            <div className="text-center py-8">
+              <Search className="size-12 text-white/30 mx-auto mb-3" />
+              <p className="text-sm text-white/70">
+                Search for an image to use as your background
+              </p>
+              <p className="text-xs text-white/50">Powered by Unsplash </p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
